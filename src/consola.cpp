@@ -28,39 +28,90 @@ static queue<int> nodos_libres;
 // Crea un ConcurrentHashMap distribuido
 static void load(list<string> params) {
 
-    for (list<string>::iterator it=params.begin(); it != params.end(); ++it) {
+    int id_tarea = 0;
+    //ASUMO CANT ARCHIVOS >= CANT NODOS
+
+    MPI_Request req;
+
+    int cant_archivos = params.size();
+
+    int i = 0;
+    list<string>::iterator it = params.begin();
+    while(i < int(np-1)){
         int nodo_libre = nodos_libres.front();
         nodos_libres.pop();
 
-        int id_tarea = 0;
-        
+
+        //le aviso al nodo que quiero hacer load
         MPI_Send(&id_tarea, 1, MPI_INT, nodo_libre, 0, MPI_COMM_WORLD);
-        
+
         //Le mando la len del path
         string arch_i = *it;
         int len_i = arch_i.size();
         
         MPI_Send(&len_i, 1, MPI_INT, nodo_libre, 0, MPI_COMM_WORLD);
- 
+
         //Le mando el path
         for (int i = 0; i < len_i; i++){
             char letra = arch_i[i];
             MPI_Send(&letra, 1, MPI_CHAR, nodo_libre, 0, MPI_COMM_WORLD);
         }
 
-        //Espero a que me envie una R (Ready)
-        char ready;
-        MPI_Recv(&ready, 1, MPI_CHAR, nodo_libre, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        if(ready=='R'){
-            cout<<"listo el pollo, a encolar "<< nodo_libre <<" " <<endl;
-            nodos_libres.push(nodo_libre);
+        i++;
+        it++;
+    }
+
+    //Ya le mande a cada nodo un archivo
+    //Espero que terminen para seguir mandado
+
+    int cant_terminados = 0;
+    int cant_asignados = np-1;
+
+    cout<<"asignados por ahora: "<<cant_asignados<<endl;
+    while(true){
+
+        MPI_Status status;
+        // receive message from any source
+        int ready;
+
+        //ESTE RECV(+ el sned del nodo) DEBERIA SER NO BLOQUEANTE????
+        MPI_Recv(&ready, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        
+        int nodo_que_termino = status.MPI_SOURCE;
+        cout << "listo: " << nodo_que_termino << endl;
+
+        cant_terminados++;
+        cout <<"terminados: "<<cant_terminados<<"/"<<cant_archivos<<endl;
+        cout<<"asignados: "<<cant_asignados<<"/"<<cant_archivos<<endl;
+        if(cant_asignados < cant_archivos){
+            //mando proximo archivo
+
+            //le aviso al nodo que quiero hacer load
+            MPI_Send(&id_tarea, 1, MPI_INT, nodo_que_termino, 0, MPI_COMM_WORLD);
+
+            //Le mando la len del path
+            string arch_i = *it;
+            int len_i = arch_i.size();
+            
+            MPI_Send(&len_i, 1, MPI_INT, nodo_que_termino, 0, MPI_COMM_WORLD);
+
+            //Le mando el path
+            for (int i = 0; i < len_i; i++){
+                char letra = arch_i[i];
+                MPI_Send(&letra, 1, MPI_CHAR, nodo_que_termino, 0, MPI_COMM_WORLD);
+            }
+            cant_asignados++;
+            it++;
+        }else if(cant_terminados < cant_archivos){
+            //vuelvo a iterar
+        }else{
+            break;
         }
 
-
-
-
     }
+
+    
 
     cout << "La listá esta procesada" << endl;
 }

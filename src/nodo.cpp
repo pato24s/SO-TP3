@@ -7,15 +7,9 @@
 using namespace std;
 
 void nodo(unsigned int rank) {
-    printf("Soy un nodo. Mi rank es %d \n", rank);
+    MPI_Request req;
 
-    // TODO: Implementar
-    // Creo un HashMap loal
-    // char bufferino;
-    // if(rank==1){
-    // 	MPI_Recv(&bufferino, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    // 	cout<<"rank "<<rank<<" recibio: "<<bufferino<<endl;
-    // }
+    printf("Soy un nodo. Mi rank es %d \n", rank);
 
     HashMap h;
     while (true) {
@@ -44,8 +38,12 @@ void nodo(unsigned int rank) {
     		h.load(nombreString);
 
     		//TENGO QUE AVISARLE A CONSOLA QUE TERMINE
-    		char ready = 'R';
-    		MPI_Send(&ready, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+
+    		int ready = rank;
+
+            MPI_Send(&ready, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+
+
 
 
     	}else if(id_tarea == 1){
@@ -64,7 +62,6 @@ void nodo(unsigned int rank) {
 
 
 
-        // TODO: Procesar mensaje
     }
 }
 
