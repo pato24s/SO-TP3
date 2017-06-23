@@ -1,68 +1,60 @@
 #include "nodo.hpp"
 #include "HashMap.hpp"
 #include "mpi.h"
+#include "defines.h"
 #include <unistd.h>
 #include <stdlib.h>
 
 using namespace std;
 
 void nodo(unsigned int rank) {
-    MPI_Request req;
-
-    printf("Soy un nodo. Mi rank es %d \n", rank);
-
     HashMap h;
     while (true) {
+        int tarea;
+    	MPI_Recv(&tarea, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        if (DEBUG & 1) cout << "[" << rank << "] " << "Recibí tarea " << tarea << endl;
+    
+        if (tarea == ID_LOAD) {
+            if (DEBUG & 1) cout << "[" << rank << "] " << "Empiezo a hacer load" << endl;			
+            int longitud;
+            // recibo longitud de path
+            MPI_Recv(&longitud, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            if (DEBUG & 1) cout << "[" << rank << "] " << "Me pasan la longitud del path: " << longitud << endl;	
 
-    	int id_tarea;
-    	MPI_Recv(&id_tarea, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    	if(id_tarea == 0){
+            char nombre[longitud];
+            // recibo path
+            MPI_Recv(&nombre, longitud, MPI_CHAR, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);				
+            // casteo a string
+            string nombre_string = string(nombre);
+            if (DEBUG & 1) cout << "[" << rank << "] Me pasan el path: " << nombre_string << endl;
+            // cargo archivo en el hashmap
+            h.load(nombre_string);
 
-    		cout << "its load time"<<rank<<" " << endl;
+            // trabajo arduamente y luego le aviso a la consola que termine
+            int rank_int = rank;
+            trabajarArduamente();
+            MPI_Send(&rank_int, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            
+        } else if (tarea == ID_ADD) {
 
-    		//Tengo que esperar el nombre de archivo
-    		int len;
-    		// cout << "se viene un archivo con nombre de largo: " <<endl;
-    		MPI_Recv(&len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            cout << "add and inc!!" << endl;
 
-    		char nombre[len];
+        } else if (tarea == ID_MEMBER) {
 
-    		for (int i = 0; i < len; i++){
-    			char letra;
-    			MPI_Recv(&letra, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    			nombre[i]=letra;
+            cout << "MEEEEEEEEEEEEEEEEEMBER" << endl;
 
-    		}
-    		string nombreString = string(nombre);
+        } else if (tarea == ID_MAXIMUM) {	
 
-    		h.load(nombreString);
+            cout << "MAXXXXX" << endl;
 
-    		//TENGO QUE AVISARLE A CONSOLA QUE TERMINE
-
-    		int ready = rank;
-
-            MPI_Send(&ready, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-
-
-
-
-    	}else if(id_tarea == 1){
-
-    		cout << "add and inc!!" << endl;
-
-    	}else if(id_tarea == 2){
-
-    		cout << "MEEEEEEEEEEEEEEEEEMBER" << endl;
-
-    	}else{	
-
-    		cout << "MAXXXXX" << endl;
-
-    	}
-
-
-
+        } else {
+            cout << "QUIT" << endl;
+        }
+        
+        if (DEBUG & 1) cout << "[" << rank << "] " << "Termine con la tarea que me dieron" << endl;	
     }
+
+    if (DEBUG & 1) cout << "[" << rank << "] " << "Finalizo" << endl;	
 }
 
 void trabajarArduamente() {
