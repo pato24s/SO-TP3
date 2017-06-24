@@ -75,7 +75,29 @@ static void quit() {
 // Esta función calcula el máximo con todos los nodos
 static void maximum() {
     int tarea = ID_MAXIMUM;
-    MPI_Send(&tarea, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+    for (unsigned int i = 1; i < np; i++) {
+        // le aviso al nodo i que quiero hacer maximum
+        MPI_Send(&tarea, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+    }
+
+    HashMap h;
+    int finalizados = 0;
+    char palabra[MAX_WORD_LEN];
+    memset(palabra, 0, MAX_WORD_LEN);
+    int tag;
+ 
+    while (finalizados != np - 1) {
+        // recibo una palabra de algun nodo
+        MPI_Recv(&palabra, 1, MPI_CHAR, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        // agrego palabra al hashmap y me fijo si es la ultima del nodo que me la envio
+        h.addAndInc(string(palabra));
+        if (tag == FINISHED) 
+            finalizados++;
+    }
+
+    kv_pair maximo = h.maximum();
+    cout << "El maximo es <" << maximo.first << ", " << maximo.second << ">" << endl;
+    
 }
 
 // Esta función busca la existencia de *key* en algún nodo
@@ -120,21 +142,21 @@ static void addAndInc(string key) {
         MPI_Send(&tarea, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
     }
 
-    int nodo_ganador_msg;
+    int nodo_rank;
     unsigned int nodo_ganador;
-    for (unsigned int i = 1; i < np; i++){
+    for (unsigned int i = 1; i < np; i++) {
         //recibo respuesta de los nodos y me guardo quien respondio primero
-        MPI_Recv(&nodo_ganador_msg, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&nodo_rank, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        if(i == 1){
+        if (i == 1) {
             //si es el primer mensaje recibido guardo al ganador
-            nodo_ganador = nodo_ganador_msg;
+            nodo_ganador = nodo_rank;
         }
     }
 
-    for (unsigned int i =1; i < np; i++){
+    for (unsigned int i = 1; i < np; i++) {
         //le aviso a cada nodo su resultado
-        if(i != nodo_ganador){
+        if (i != nodo_ganador) {
             //le aviso al nodo q no tiene q hacer nada porque es una lenteja
 
             string msge_fracaso = "fracaso";
@@ -142,8 +164,7 @@ static void addAndInc(string key) {
             const char* fracaso_c = msge_fracaso.c_str();
             MPI_Send(fracaso_c, longitud, MPI_CHAR, i, 0, MPI_COMM_WORLD);
 
-
-        }else{
+        } else {
             //le aviso al nodo que tiene que hacer add and inc porque fue el mas rápido
             string msge_exito = "exito";
             int longitud = msge_exito.size();
@@ -159,6 +180,10 @@ static void addAndInc(string key) {
             MPI_Send(key_c, longitud, MPI_CHAR, nodo_ganador, 0, MPI_COMM_WORLD);
         }
     }
+
+    // espero a que el nodo ganador termine con el addAndInc
+    MPI_Recv(&nodo_rank, 1, MPI_INT, nodo_ganador, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
     if (DEBUG & 1) cout << "El nodo mas veloz del condado es: " << nodo_ganador << endl;
     cout << "La clave " << key << " ha sido agregada correctamente" << endl;
 }

@@ -13,6 +13,9 @@
 #define ID_MAXIMUM 4
 #define ID_QUIT    5
 
+#define CONTINUE 0
+#define FINISHED 1
+
 #define MAX_FILE_LEN 50
 #define MAX_WORD_LEN 50
 

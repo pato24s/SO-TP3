@@ -1,15 +1,4 @@
-#include <iostream>
-#include <fstream>
-#include <algorithm>
-#include <ctype.h>
 #include "HashMap.hpp"
-
-using namespace std;
-
-typedef pair<string, unsigned int> kv_pair;
-typedef list<kv_pair> kv_list;
-typedef kv_list::iterator kv_list_it;
-typedef kv_list::const_iterator kv_list_const_it;
 
 HashMap::HashMap() {
     _size = 0;

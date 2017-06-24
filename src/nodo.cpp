@@ -57,9 +57,12 @@ void nodo(unsigned int rank) {
                 MPI_Recv(key_c, MAX_WORD_LEN, MPI_CHAR, CONSOLE_RANK, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 string key = string(key_c);
 
-                //ya tengo la key, tengo que hacer add and inc
+                //ya tengo la key, tengo que hacer addAndInc
                 h.addAndInc(key);
 
+                // le aviso al nodo consola que ya termine con el addAndInc
+                trabajarArduamente();
+                MPI_Send(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD);
             }           
 
         } else if (tarea == ID_MEMBER) {
@@ -83,7 +86,20 @@ void nodo(unsigned int rank) {
 
         } else if (tarea == ID_MAXIMUM) {	
 
-            cout << "MAXXXXX" << endl;
+            for (HashMap::iterator it = h.begin(); it != h.end(); it++) {
+                // le mando una palabra del hashmap al nodo consola
+                string palabra_s = *it;               
+                int longitud = palabra_s.size();
+                const char* palabra = palabra_s.c_str();            
+                
+                int tag = CONTINUE;
+                HashMap::iterator it_aux = it++;
+                if (it_aux == h.end())
+                    tag = FINISHED;
+                
+                trabajarArduamente();
+                MPI_Send(palabra, longitud, MPI_CHAR, CONSOLE_RANK, tag, MPI_COMM_WORLD);
+            }
 
         } else {
             break;
