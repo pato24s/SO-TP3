@@ -114,10 +114,53 @@ static void member(string key) {
 static void addAndInc(string key) {
 
     // TODO: Implementar
-    int id_tarea = 1;
-        MPI_Send(&id_tarea, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+    int tarea = ID_ADD;
+    for (unsigned int i = 1; i < np; i++) {
+        // le aviso al nodo i que quiero hacer add
+        MPI_Send(&tarea, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+    }
 
-    cout << "Agregado: " << key << endl;
+    int nodo_ganador_msg;
+    unsigned int nodo_ganador;
+    for (unsigned int i = 1; i < np; i++){
+        //recibo respuesta de los nodos y me guardo quien respondio primero
+        MPI_Recv(&nodo_ganador_msg, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        if(i == 1){
+            //si es el primer mensaje recibido guardo al ganador
+            nodo_ganador = nodo_ganador_msg;
+        }
+    }
+
+    for (unsigned int i =1; i < np; i++){
+        //le aviso a cada nodo su resultado
+        if(i != nodo_ganador){
+            //le aviso al nodo q no tiene q hacer nada porque es una lenteja
+
+            string msge_fracaso = "fracaso";
+            int longitud = msge_fracaso.size();
+            const char* fracaso_c = msge_fracaso.c_str();
+            MPI_Send(fracaso_c, longitud, MPI_CHAR, i, 0, MPI_COMM_WORLD);
+
+
+        }else{
+            //le aviso al nodo que tiene que hacer add and inc porque fue el mas rápido
+            string msge_exito = "exito";
+            int longitud = msge_exito.size();
+            const char* exito_c = msge_exito.c_str();
+            MPI_Send(exito_c, longitud, MPI_CHAR, nodo_ganador, 0, MPI_COMM_WORLD);
+
+            //le tengo que mandar la key
+            longitud = key.size();
+            const char* key_c_aux = key.c_str();
+            char key_c[MAX_WORD_LEN];
+            strcpy(key_c, key_c_aux);
+
+            MPI_Send(key_c, longitud, MPI_CHAR, nodo_ganador, 0, MPI_COMM_WORLD);
+        }
+    }
+    if (DEBUG & 1) cout << "El nodo mas veloz del condado es: " << nodo_ganador << endl;
+    cout << "La clave " << key << " ha sido agregada correctamente" << endl;
 }
 
 

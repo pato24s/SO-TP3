@@ -37,7 +37,30 @@ void nodo(unsigned int rank) {
             
         } else if (tarea == ID_ADD) {
 
-            cout << "add and inc!!" << endl;
+            //quieren hacer add, tengo que ganarle a todos los otros nodos y responder mi rank rapido
+            int rank_int = rank;
+            trabajarArduamente();
+            MPI_Send(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+
+            char resultado[MAX_WORD_LEN];
+            memset(resultado, 0, MAX_WORD_LEN);
+
+            MPI_Recv(&resultado, MAX_FILE_LEN, MPI_CHAR, CONSOLE_RANK, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            string result = string(resultado);
+
+
+            if(result == "exito"){
+                //espero la key a agregar
+                char key_c[MAX_WORD_LEN];            
+                memset(key_c, 0, MAX_WORD_LEN);
+                MPI_Recv(key_c, MAX_WORD_LEN, MPI_CHAR, CONSOLE_RANK, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                string key = string(key_c);
+
+                //ya tengo la key, tengo que hacer add and inc
+                h.addAndInc(key);
+
+            }           
 
         } else if (tarea == ID_MEMBER) {
 
