@@ -34,13 +34,12 @@ static void load(list<string> params) {
             
             // le aviso al nodo que quiero hacer load
             MPI_Send(&tarea, 1, MPI_INT, nodo_libre, 0, MPI_COMM_WORLD);
-
+            if (DEBUG & 1) cout << "[0] Le doy tarea load del archivo " << *it << " a " << nodo_libre << endl;
+            
             string archivo = *it;
             int longitud = archivo.size();
             const char* archivo_c = archivo.c_str();
-            // mando la longitud del path
-            MPI_Send(&longitud, 1, MPI_INT, nodo_libre, 0, MPI_COMM_WORLD);
-            // mando el path
+            // le mando el archivo
             MPI_Send(archivo_c, longitud, MPI_CHAR, nodo_libre, 0, MPI_COMM_WORLD);
             it++;
             continue;
@@ -49,27 +48,65 @@ static void load(list<string> params) {
         // si hay archivos por parsear, pero no hay nodos disponibles, recibe de manera bloqueante, a
         // la espera de que algun nodo termine
         MPI_Recv(&nuevo_nodo_libre, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        if (DEBUG & 1) cout << "[0] El nodo " << nuevo_nodo_libre << " me aviso que termino y lo encole" << endl;
         nodos_libres.push(nuevo_nodo_libre);
+        if (DEBUG & 1) cout << "[0] El nodo " << nuevo_nodo_libre << " me aviso que termino y lo encole" << endl;
     }
+
+    // calculo la cantidad de nodos que tengo que esperar a que terminen
+    int cant_recv = (int(np-1) < cant_archivos)? np-1 : cant_archivos;
+    for (int i = 0; i < cant_recv; i++) {
+        MPI_Recv(&nuevo_nodo_libre, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        nodos_libres.push(nuevo_nodo_libre);
+        if (DEBUG & 1) cout << "[0] El nodo " << nuevo_nodo_libre << " me aviso que termino y lo encole" << endl;
+    }
+
+    cout << "El load ha finalizado" << endl;
 }
 
 // Esta función debe avisar a todos los nodos que deben terminar
 static void quit() {
-    // TODO: Implementar
+    int tarea = ID_QUIT;
+    for (unsigned int i = 1; i < np; i++) {
+        // le aviso al nodo i que quiero hacer quit
+        MPI_Send(&tarea, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+    }
 }
 
 // Esta función calcula el máximo con todos los nodos
 static void maximum() {
-    int id_tarea = 3;
-        MPI_Send(&id_tarea, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+    int tarea = ID_MAXIMUM;
+    MPI_Send(&tarea, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 }
 
 // Esta función busca la existencia de *key* en algún nodo
 static void member(string key) {
-   int id_tarea = ID_MEMBER;
+    int tarea = ID_MEMBER;
+    for (unsigned int i = 1; i < np; i++) {
+        // le aviso al nodo i que quiero hacer member
+        MPI_Send(&tarea, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+    }
+    // todo esto para obtener el string como char * (no const)
+    int longitud = key.size();
+    const char* key_c_aux = key.c_str();
+    char key_c[MAX_WORD_LEN];
+    strcpy(key_c, key_c_aux);
+    // broadcast de key, para todos los nodos         
+    MPI_Bcast(key_c, longitud, MPI_CHAR, CONSOLE_RANK, MPI_COMM_WORLD);
 
-    MPI_Send(&id_tarea, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+    // espero respuesta de cada nodo
+    bool res = false;
+    for (unsigned int i = 1; i < np; i++) {
+        // recibo respuesta de alguno de los nodos
+        bool res_member_i;
+        MPI_Recv(&res_member_i, 1, MPI_C_BOOL, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        res |= res_member_i;
+    }
+
+    if (res)
+        cout << "La clave " << key << " ESTA DEFINIDA" << endl;
+    else
+        cout << "La clave " << key << " NO ESTA DEFINIDA" << endl;
+        
 }
 
 
@@ -173,7 +210,7 @@ void consola(unsigned int np_param) {
 
     np = np_param;
     cout<<"NP:::    "<<np<<endl;
-    for (int i = 0; i < np-1; i++) {
+    for (unsigned int i = 0; i < np-1; i++) {
         nodos_libres.push(i+1);
     }
     printf("Comandos disponibles:\n");
