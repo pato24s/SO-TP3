@@ -91,15 +91,17 @@ void nodo(unsigned int rank) {
                 string palabra_s = *it;               
                 int longitud = palabra_s.size();
                 const char* palabra = palabra_s.c_str();            
-                
-                int tag = CONTINUE;
-                HashMap::iterator it_aux = it++;
-                if (it_aux == h.end())
-                    tag = FINISHED;
-                
-                trabajarArduamente();
-                MPI_Send(palabra, longitud, MPI_CHAR, CONSOLE_RANK, tag, MPI_COMM_WORLD);
+
+                // esto es para que solo se llame una vez a trabarjarArduamente
+                if (it == h.begin())                
+                    trabajarArduamente();
+                MPI_Send(palabra, longitud, MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD);
             }
+
+            // mando mensaje de finalizacion, indicando que termine de enviar palabras
+            char msj_fin[] = END_STRING;
+            trabajarArduamente();            
+            MPI_Send(msj_fin, strlen(msj_fin), MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD);
 
         } else {
             break;

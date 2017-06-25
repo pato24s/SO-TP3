@@ -81,18 +81,20 @@ static void maximum() {
     }
 
     HashMap h;
-    int finalizados = 0;
+    unsigned int finalizados = 0;
     char palabra[MAX_WORD_LEN];
-    memset(palabra, 0, MAX_WORD_LEN);
-    int tag;
  
     while (finalizados != np - 1) {
+        // limpio buffer
+        memset(palabra, 0, MAX_WORD_LEN);
         // recibo una palabra de algun nodo
-        MPI_Recv(&palabra, 1, MPI_CHAR, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        // agrego palabra al hashmap y me fijo si es la ultima del nodo que me la envio
-        h.addAndInc(string(palabra));
-        if (tag == FINISHED) 
+        MPI_Recv(&palabra, MAX_WORD_LEN, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        
+        // me fijo si es mensaje de finalizacion, y en caso de que no, agrego la palabra al hashmap
+        if (strcmp(palabra, END_STRING) == 0) 
             finalizados++;
+        else
+            h.addAndInc(string(palabra));
     }
 
     kv_pair maximo = h.maximum();
