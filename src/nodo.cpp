@@ -18,7 +18,7 @@ void nodo(unsigned int rank) {
             
             // creo buffer y lo limpio por las dudas
             char nombre[MAX_FILE_LEN];
-            memset(nombre, 0, MAX_FILE_LEN);            
+            // memset(nombre, 0, MAX_FILE_LEN);            
             // recibo path
             MPI_Recv(&nombre, MAX_FILE_LEN, MPI_CHAR, CONSOLE_RANK, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);				
             // casteo a string
@@ -43,17 +43,17 @@ void nodo(unsigned int rank) {
             MPI_Send(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD);
 
             char resultado[MAX_WORD_LEN];
-            memset(resultado, 0, MAX_WORD_LEN);
+            // memset(resultado, 0, MAX_WORD_LEN);
 
             MPI_Recv(&resultado, MAX_FILE_LEN, MPI_CHAR, CONSOLE_RANK, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
             string result = string(resultado);
 
 
-            if(result == "exito"){
+            if (result == "exito") {
                 //espero la key a agregar
                 char key_c[MAX_WORD_LEN];            
-                memset(key_c, 0, MAX_WORD_LEN);
+                // memset(key_c, 0, MAX_WORD_LEN);
                 MPI_Recv(key_c, MAX_WORD_LEN, MPI_CHAR, CONSOLE_RANK, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 string key = string(key_c);
 
@@ -69,7 +69,7 @@ void nodo(unsigned int rank) {
 
             // creo buffer y lo limpio por las dudas            
             char key_c[MAX_WORD_LEN];            
-            memset(key_c, 0, MAX_WORD_LEN);
+            // memset(key_c, 0, MAX_WORD_LEN);
             // recibo clave a buscar
             MPI_Bcast(key_c, MAX_WORD_LEN, MPI_CHAR, CONSOLE_RANK, MPI_COMM_WORLD);
             string key = string(key_c);
@@ -84,24 +84,25 @@ void nodo(unsigned int rank) {
             if (DEBUG & 2) cout << "[" << rank << "] " << "Le aviso al nodo consola que termine" << endl;	        
             MPI_Send(&res, 1, MPI_C_BOOL, CONSOLE_RANK, 0, MPI_COMM_WORLD);            
 
-        } else if (tarea == ID_MAXIMUM) {	
+        } else if (tarea == ID_MAXIMUM || tarea == ID_PRINT) {	
 
             for (HashMap::iterator it = h.begin(); it != h.end(); it++) {
                 // le mando una palabra del hashmap al nodo consola
-                string palabra_s = *it;               
-                int longitud = palabra_s.size();
-                const char* palabra = palabra_s.c_str();            
+                string palabra_s = *it;           
+                char palabra[MAX_WORD_LEN];           
+                strncpy(palabra, palabra_s.c_str(), palabra_s.size()+1);    
 
                 // esto es para que solo se llame una vez a trabarjarArduamente
                 if (it == h.begin())                
                     trabajarArduamente();
-                MPI_Send(palabra, longitud, MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+                MPI_Send(palabra, strlen(palabra), MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD);
             }
 
             // mando mensaje de finalizacion, indicando que termine de enviar palabras
             char msj_fin[] = END_STRING;
             trabajarArduamente();            
-            MPI_Send(msj_fin, strlen(msj_fin), MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+            MPI_Send(msj_fin, strlen(msj_fin)+1, MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+            
 
         } else {
             break;

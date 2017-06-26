@@ -103,6 +103,7 @@ void HashMap::load(const string &filename) {
 }
 
 void HashMap::printAll() const {
+    cout << endl;
     for (int i = 0; i < 26; ++i) {
         kv_list const &bucket = table[i];
 
@@ -110,7 +111,7 @@ void HashMap::printAll() const {
             it != bucket.end();
             ++it)
         {
-            cout << "<" << (*it).first << "," << (*it).second << ">" << endl;
+            cout << (*it).first << " " << (*it).second << endl;
         }
     }
 }

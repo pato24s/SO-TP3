@@ -4,6 +4,7 @@
 #define CMD_MAXIMUM "maximum"
 #define CMD_QUIT    "quit"
 #define CMD_SQUIT   "q"
+#define CMD_PRINT   "print"
 
 #define CONSOLE_RANK 0
  
@@ -12,6 +13,7 @@
 #define ID_MEMBER  3
 #define ID_MAXIMUM 4
 #define ID_QUIT    5
+#define ID_PRINT   6
 
 #define END_STRING "fin de hashmap"
 

@@ -37,10 +37,10 @@ static void load(list<string> params) {
             if (DEBUG & 1) cout << "[0] Le doy tarea load del archivo " << *it << " a " << nodo_libre << endl;
             
             string archivo = *it;
-            int longitud = archivo.size();
-            const char* archivo_c = archivo.c_str();
+            char archivo_c[MAX_WORD_LEN];
+            strncpy(archivo_c, archivo.c_str(), archivo.size()+1); 
             // le mando el archivo
-            MPI_Send(archivo_c, longitud, MPI_CHAR, nodo_libre, 0, MPI_COMM_WORLD);
+            MPI_Send(archivo_c, strlen(archivo_c)+1, MPI_CHAR, nodo_libre, 0, MPI_COMM_WORLD);
             it++;
             continue;
         }
@@ -109,13 +109,11 @@ static void member(string key) {
         // le aviso al nodo i que quiero hacer member
         MPI_Send(&tarea, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
     }
-    // todo esto para obtener el string como char * (no const)
-    int longitud = key.size();
-    const char* key_c_aux = key.c_str();
-    char key_c[MAX_WORD_LEN];
-    strcpy(key_c, key_c_aux);
+
     // broadcast de key, para todos los nodos         
-    MPI_Bcast(key_c, longitud, MPI_CHAR, CONSOLE_RANK, MPI_COMM_WORLD);
+    char key_c[MAX_WORD_LEN];
+    strncpy(key_c, key.c_str(), key.size()+1);
+    MPI_Bcast(key_c, strlen(key_c), MPI_CHAR, CONSOLE_RANK, MPI_COMM_WORLD);
 
     // espero respuesta de cada nodo
     bool res = false;
@@ -160,26 +158,18 @@ static void addAndInc(string key) {
         //le aviso a cada nodo su resultado
         if (i != nodo_ganador) {
             //le aviso al nodo q no tiene q hacer nada porque es una lenteja
-
-            string msge_fracaso = "fracaso";
-            int longitud = msge_fracaso.size();
-            const char* fracaso_c = msge_fracaso.c_str();
-            MPI_Send(fracaso_c, longitud, MPI_CHAR, i, 0, MPI_COMM_WORLD);
+            char msj[] = "fracaso";
+            MPI_Send(msj, strlen(msj)+1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
 
         } else {
             //le aviso al nodo que tiene que hacer add and inc porque fue el mas rápido
-            string msge_exito = "exito";
-            int longitud = msge_exito.size();
-            const char* exito_c = msge_exito.c_str();
-            MPI_Send(exito_c, longitud, MPI_CHAR, nodo_ganador, 0, MPI_COMM_WORLD);
+            char msj[] = "exito";
+            MPI_Send(msj, strlen(msj)+1, MPI_CHAR, nodo_ganador, 0, MPI_COMM_WORLD);
 
             //le tengo que mandar la key
-            longitud = key.size();
-            const char* key_c_aux = key.c_str();
             char key_c[MAX_WORD_LEN];
-            strcpy(key_c, key_c_aux);
-
-            MPI_Send(key_c, longitud, MPI_CHAR, nodo_ganador, 0, MPI_COMM_WORLD);
+            strncpy(key_c, key.c_str(), key.size()+1);
+            MPI_Send(key_c, strlen(key_c)+1, MPI_CHAR, nodo_ganador, 0, MPI_COMM_WORLD);
         }
     }
 
@@ -188,6 +178,34 @@ static void addAndInc(string key) {
 
     if (DEBUG & 1) cout << "El nodo mas veloz del condado es: " << nodo_ganador << endl;
     cout << "La clave " << key << " ha sido agregada correctamente" << endl;
+}
+
+// Esta función imprime el contendo del DistributedHashMap
+static void print() {
+    int tarea = ID_PRINT;
+    for (unsigned int i = 1; i < np; i++) {
+        // le aviso al nodo i que quiero hacer print
+        MPI_Send(&tarea, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
+    }
+
+    HashMap h;
+    unsigned int finalizados = 0;
+    char palabra[MAX_WORD_LEN];
+ 
+    while (finalizados != np - 1) {
+        // limpio buffer
+        memset(palabra, 0, MAX_WORD_LEN);
+        // recibo una palabra de algun nodo
+        MPI_Recv(&palabra, MAX_WORD_LEN, MPI_CHAR, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        
+        // me fijo si es mensaje de finalizacion, y en caso de que no, agrego la palabra al hashmap
+        if (strcmp(palabra, END_STRING) == 0) 
+            finalizados++;
+        else
+            h.addAndInc(string(palabra));
+    }
+
+    h.printAll();
 }
 
 
@@ -205,7 +223,6 @@ static bool procesar_comandos() {
 
     // Mi mamá no me deja usar gets :(
     res = fgets(buffer, sizeof(buffer), stdin);
-
     // Permitimos salir con EOF
     if (res==NULL)
         return true;
@@ -232,6 +249,11 @@ static bool procesar_comandos() {
         maximum();
         return false;
     }
+
+    if (strncmp(first_param, CMD_PRINT, sizeof(CMD_PRINT))==0) {
+        print();
+        return false;
+    }    
 
     // Obtenemos el segundo parámetro
     second_param = strtok(NULL, " ");
