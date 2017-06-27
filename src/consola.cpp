@@ -113,7 +113,7 @@ static void member(string key) {
     // broadcast de key, para todos los nodos         
     char key_c[MAX_WORD_LEN];
     strncpy(key_c, key.c_str(), key.size()+1);
-    MPI_Bcast(key_c, strlen(key_c), MPI_CHAR, CONSOLE_RANK, MPI_COMM_WORLD);
+    MPI_Bcast(key_c, strlen(key_c)+1, MPI_CHAR, CONSOLE_RANK, MPI_COMM_WORLD);
 
     // espero respuesta de cada nodo
     bool res = false;
@@ -311,6 +311,7 @@ void consola(unsigned int np_param) {
     printf("  "CMD_MEMBER" <string>\n");
     printf("  "CMD_MAXIMUM"\n");
     printf("  "CMD_SQUIT"|"CMD_QUIT"\n");
+    printf("  "CMD_PRINT"\n");
 
     bool fin = false;
     while (!fin) {
