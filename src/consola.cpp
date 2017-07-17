@@ -18,7 +18,6 @@ static unsigned int np;
 static queue<int> nodos_libres;
 
 // Crea un ConcurrentHashMap distribuido
-// TODO: preguntar si el nodo consola tambien tiene que trabajar arduamente antes de cada send
 static void load(list<string> params) {
 
     int tarea = ID_LOAD; 
