@@ -11,6 +11,7 @@ void nodo(unsigned int rank) {
     HashMap h;
     while (true) {
         int tarea;
+        MPI_Request request;
     	MPI_Recv(&tarea, 1, MPI_INT, CONSOLE_RANK, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         if (DEBUG & 2) cout << "[" << rank << "] " << "Recibo tarea " << tarea << endl;
     
@@ -33,14 +34,15 @@ void nodo(unsigned int rank) {
             int rank_int = rank;
             trabajarArduamente();
             if (DEBUG & 2) cout << "[" << rank << "] " << "Le aviso al nodo consola que termine" << endl;
-            MPI_Send(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+            // MPI_Send(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+            MPI_Isend(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD, &request);            
             
         } else if (tarea == ID_ADD) {
 
             //quieren hacer add, tengo que ganarle a todos los otros nodos y responder mi rank rapido
             int rank_int = rank;
             trabajarArduamente();
-            MPI_Send(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+            MPI_Isend(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD, &request);
 
             char resultado[MAX_WORD_LEN];
             // memset(resultado, 0, MAX_WORD_LEN);
@@ -48,7 +50,6 @@ void nodo(unsigned int rank) {
             MPI_Recv(&resultado, MAX_FILE_LEN, MPI_CHAR, CONSOLE_RANK, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
             string result = string(resultado);
-
 
             if (result == "exito") {
                 //espero la key a agregar
@@ -62,8 +63,11 @@ void nodo(unsigned int rank) {
 
                 // le aviso al nodo consola que ya termine con el addAndInc
                 trabajarArduamente();
-                MPI_Send(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD);
-            }           
+                MPI_Isend(&rank_int, 1, MPI_INT, CONSOLE_RANK, 0, MPI_COMM_WORLD, &request);
+            } else {
+                MPI_Request_free(&request);
+                if (DEBUG & 2) cout << "[" << rank << "] " << "Elimine mensaje enviado antes" << endl;
+            }       
 
         } else if (tarea == ID_MEMBER) {
 
@@ -72,6 +76,7 @@ void nodo(unsigned int rank) {
             // memset(key_c, 0, MAX_WORD_LEN);
             // recibo clave a buscar
             MPI_Bcast(key_c, MAX_WORD_LEN, MPI_CHAR, CONSOLE_RANK, MPI_COMM_WORLD);
+            if (DEBUG & 2) printf("[%d] Recibi por bcast la clave %s", rank, key_c);
             string key = string(key_c);
             if (DEBUG & 2) cout << "[" << rank << "] Me pasan la clave: " << key << endl;          
             
@@ -82,7 +87,7 @@ void nodo(unsigned int rank) {
             // trabajo arduamente y luego le mando al nodo consola el resultado de member            
             trabajarArduamente();
             if (DEBUG & 2) cout << "[" << rank << "] " << "Le aviso al nodo consola que termine" << endl;	        
-            MPI_Send(&res, 1, MPI_C_BOOL, CONSOLE_RANK, 0, MPI_COMM_WORLD);            
+            MPI_Isend(&res, 1, MPI_C_BOOL, CONSOLE_RANK, 0, MPI_COMM_WORLD, &request);            
 
         } else if (tarea == ID_MAXIMUM || tarea == ID_PRINT) {	
 
@@ -95,15 +100,14 @@ void nodo(unsigned int rank) {
                 // esto es para que solo se llame una vez a trabarjarArduamente
                 if (it == h.begin())                
                     trabajarArduamente();
-                MPI_Send(palabra, strlen(palabra), MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+                MPI_Isend(palabra, strlen(palabra), MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD, &request);
             }
 
             // mando mensaje de finalizacion, indicando que termine de enviar palabras
             char msj_fin[] = END_STRING;
             trabajarArduamente();            
-            MPI_Send(msj_fin, strlen(msj_fin)+1, MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD);
+            MPI_Isend(msj_fin, strlen(msj_fin)+1, MPI_CHAR, CONSOLE_RANK, 0, MPI_COMM_WORLD, &request);
             
-
         } else {
             break;
         }        
